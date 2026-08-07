@@ -1,0 +1,30 @@
+{
+  "name": "keypoint-memory",
+  "version": "0.1.0",
+  "description": "在长对话中每累计 10 个用户问题，提炼关键点并生成 Markdown 索引文件保存到 D:\\memory，保存前先展示给用户审阅。",
+  "author": {
+    "name": "Codex User"
+  },
+  "license": "MIT",
+  "keywords": [
+    "keypoints",
+    "memory",
+    "markdown",
+    "conversation"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "对话关键点记忆",
+    "shortDescription": "每 10 问自动提炼关键点并存入 D:\\memory",
+    "longDescription": "在长问答/讲解型对话中，每累计 10 个有实质内容的用户问题，回顾最近 10 问并提炼关键点（编号/主题/一句话定位/搜索锚点），生成 Markdown 索引文件追加保存到 D:\\memory 下以对话名命名的文件中；每次写入前先在对话中展示完整内容，等用户审阅同意后才落盘。",
+    "developerName": "Codex User",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "brandColor": "#4F46E5",
+    "defaultPrompt": [
+      "开始记录对话关键点，每 10 问保存一次到 D:\\memory"
+    ]
+  }
+}

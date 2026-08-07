@@ -1,0 +1,32 @@
+{
+  "name": "glm-vision",
+  "version": "0.1.0+codex.20260807021150",
+  "description": "\u901a\u8fc7\u667a\u8c31 GLM-5V-Turbo \u591a\u6a21\u6001\u6a21\u578b\u4e3a Codex \u589e\u52a0\u56fe\u7247\u7406\u89e3\u80fd\u529b\u7684\u89c6\u89c9\u63d2\u4ef6",
+  "author": {
+    "name": "Codex User"
+  },
+  "license": "MIT",
+  "keywords": [
+    "vision",
+    "glm",
+    "image",
+    "multimodal"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "GLM Vision",
+    "shortDescription": "\u7528 GLM-5V-Turbo \u4e3a Codex \u589e\u52a0\u56fe\u7247\u7406\u89e3\u80fd\u529b",
+    "longDescription": "\u5f53\u4efb\u52a1\u6d89\u53ca\u67e5\u770b\u6216\u5206\u6790\u56fe\u7247\u3001\u622a\u56fe\u3001UI \u8bbe\u8ba1\u7a3f\u3001\u56fe\u8868\u3001\u6587\u6863\u7248\u9762\u65f6\uff0cCodex \u8c03\u7528\u672c\u5730\u811a\u672c\u628a\u56fe\u7247\u53d1\u9001\u7ed9\u667a\u8c31 GLM-5V-Turbo \u591a\u6a21\u6001\u6a21\u578b\u5e76\u53d6\u56de\u6587\u5b57\u63cf\u8ff0\u3002\u4e09\u4e2a API Key \u6309\u8f6e\u8be2\u52a0\u6545\u969c\u8f6c\u79fb\u65b9\u5f0f\u4f7f\u7528\u3002",
+    "developerName": "Codex User",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "brandColor": "#4F46E5",
+    "defaultPrompt": [
+      "\u5206\u6790\u8fd9\u5f20\u56fe\u7247\u7684\u5185\u5bb9",
+      "\u8bfb\u53d6\u622a\u56fe\u91cc\u7684\u6587\u5b57\u548c\u5e03\u5c40",
+      "\u63cf\u8ff0\u8fd9\u5f20 UI \u8bbe\u8ba1\u7a3f"
+    ]
+  }
+}

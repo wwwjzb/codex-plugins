@@ -1,0 +1,13 @@
+{
+    "timeout": 60,
+    "temperature": 0.2,
+    "max_tokens": 2048,
+    "max_image_size": 1568,
+    "model": "glm-5v-turbo",
+    "endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+    "api_keys": [
+        "PASTE_YOUR_API_KEY_1",
+        "PASTE_YOUR_API_KEY_2",
+        "PASTE_YOUR_API_KEY_3"
+    ]
+}

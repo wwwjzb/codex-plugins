@@ -1,0 +1,5 @@
+interface:
+  display_name: "对话关键点记忆"
+  short_description: "每 10 问提炼关键点并存入 D:\\memory"
+  brand_color: "#4F46E5"
+  default_prompt: "Use $keypoint-memory to 开始记录对话关键点，每 10 问保存一次到 D:\\memory。"
