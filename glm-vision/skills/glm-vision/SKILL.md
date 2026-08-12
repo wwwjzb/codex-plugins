@@ -45,3 +45,11 @@ description: 为 Codex 增加视觉能力。当任务需要查看或分析图片
 - 相同图片 + 提示词 + 模型的请求会命中本地缓存（默认 <script_dir>/cache），几乎立即返回；需要强制重新分析时加 --no-cache。
 - 生成上限默认 2048 tokens（config.max_tokens），提示词越简短，返回越快。
 - 需要更快时可临时加 --model glm-4.6v-flash（输出更简略）；长期使用可改 config.json 的 model 字段。
+
+
+## 多图与限流
+
+- 一次分析多张图片时请用批量模式（一次 API 请求，避免逐张调用触发限流）：
+  <python> vision.py --image 1.png --image 2.png --image 3.png "请依次描述这些图片"
+- 提示词作为位置参数放在 --image 之后；批量模式下模型一次性输出对所有图片的描述。
+- 脚本会自动处理智谱限流：429 时按 Retry-After 等待并重试（默认最多 3 次，config 的 rate_limit_retries 可调），同一 key 两次调用之间有最小间隔限速（默认 5 秒，config 的 rate_limit_interval 可调，--no-wait 可关闭）。

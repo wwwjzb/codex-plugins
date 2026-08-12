@@ -1,18 +1,32 @@
 #!/usr/bin/env python3
-"""Describe an image with a Zhipu GLM vision model using API-key rotation.
+"""Describe images with a Zhipu GLM vision model using API-key rotation.
 
-Optimizations over the original version:
+Optimizations:
   * Local images are downscaled/re-encoded (Pillow, when available) before
     upload so large screenshots cost fewer image tiles and less bandwidth.
+  * Batch mode (--image A.png --image B.png ...) sends several images in ONE
+    API request, which avoids Zhipu per-minute rate limits on multi-image jobs.
+  * HTTP 429 / rate-limit responses are retried with Retry-After backoff
+    instead of failing immediately, and calls are paced per API key across
+    processes so consecutive invocations don't trip the limits.
   * Successful results are cached on disk keyed by (image bytes + prompt +
     model), so repeating the same request returns instantly.
-  * The default max_tokens is lower (configurable) to keep responses fast.
   * State/cache writes are best-effort so the script still works in
     read-only environments.
 
 Usage:
-  vision.py <image_path_or_url> [prompt] [--config PATH] [--state PATH]
-            [--max-tokens N] [--max-image-size N] [--no-cache]
+  vision.py <image_path_or_url> [prompt] [options]
+  vision.py --image <img1> [--image <img2> ...] [prompt] [options]
+
+Options:
+  --config PATH        Config JSON path
+  --state PATH         Key-rotation/rate-limit state JSON path
+  --max-tokens N       Override config max_tokens
+  --max-image-size N   Longest edge in px after downscaling local images
+  --model NAME         Override config model (e.g. glm-4.6v-flash)
+  --no-cache           Bypass the on-disk response cache
+  --no-wait            Disable cross-process pacing between calls
+  --verbose            Print pacing/retry diagnostics to stderr
 
 Exit codes:
   0  success (model text is printed to stdout)
@@ -38,9 +52,15 @@ from pathlib import Path
 
 SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"}
 DEFAULT_PROMPT = "请详细描述这张图片的内容。"
+DEFAULT_PROMPT_BATCH = "请依次详细描述这些图片的内容，并为每张图片标注序号。"
 DEFAULT_MAX_TOKENS = 2048
 DEFAULT_MAX_IMAGE_SIZE = 1568
 DEFAULT_JPEG_QUALITY = 88
+DEFAULT_MIN_INTERVAL = 5.0
+DEFAULT_RATE_LIMIT_RETRIES = 3
+RATE_LIMIT_DEFAULT_WAIT = 10.0
+MAX_RETRY_WAIT = 60.0
+LOCK_TIMEOUT = 10.0
 CACHE_MAX_ENTRIES = 200
 CACHE_TRIM_TO = 100
 CONFIG_FILENAME = "config.json"
@@ -74,29 +94,110 @@ def load_config(config_path: Path) -> dict:
     return config
 
 
-def load_state(state_path: Path) -> int:
+def load_state_full(state_path: Path) -> dict:
     try:
         state = load_json(state_path)
+        if not isinstance(state, dict):
+            return {"last_success_index": 0, "last_calls": {}}
+    except Exception:
+        return {"last_success_index": 0, "last_calls": {}}
+    state.setdefault("last_calls", {})
+    if not isinstance(state["last_calls"], dict):
+        state["last_calls"] = {}
+    return state
+
+
+def load_state(state_path: Path) -> int:
+    state = load_state_full(state_path)
+    try:
         return max(0, int(state.get("last_success_index", 0)))
     except Exception:
         return 0
 
 
+def _write_state(state_path: Path, state: dict) -> None:
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(dir=str(state_path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(state, handle)
+        os.replace(tmp_name, state_path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
+
+class FileLock:
+    """Cross-process advisory lock based on an exclusive lock file."""
+
+    def __init__(self, lock_path: Path, timeout: float = LOCK_TIMEOUT) -> None:
+        self.lock_path = Path(lock_path)
+        self.timeout = timeout
+
+    def __enter__(self) -> "FileLock":
+        try:
+            self.lock_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
+        deadline = time.time() + self.timeout
+        while True:
+            try:
+                fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.close(fd)
+                return self
+            except FileExistsError:
+                if time.time() >= deadline:
+                    return self  # Proceed unlocked (best effort).
+                time.sleep(0.05)
+            except OSError:
+                return self
+
+    def __exit__(self, *exc) -> None:
+        try:
+            self.lock_path.unlink()
+        except OSError:
+            pass
+
+
 def save_state(state_path: Path, index: int) -> None:
     """Persist key-rotation state; failures are intentionally non-fatal."""
     try:
-        state_path.parent.mkdir(parents=True, exist_ok=True)
-        fd, tmp_name = tempfile.mkstemp(dir=str(state_path.parent), suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                json.dump({"last_success_index": index}, handle)
-            os.replace(tmp_name, state_path)
-        except Exception:
-            try:
-                os.unlink(tmp_name)
-            except OSError:
-                pass
-            raise
+        with FileLock(state_path.with_suffix(".lock")):
+            state = load_state_full(state_path)
+            state["last_success_index"] = index
+            state.setdefault("last_calls", {})
+            _write_state(state_path, state)
+    except Exception:
+        pass
+
+
+def record_call(state_path: Path, index: int, after_seconds: float = 0.0) -> None:
+    """Remember when a key was used so the next invocation can pace itself."""
+    try:
+        with FileLock(state_path.with_suffix(".lock")):
+            state = load_state_full(state_path)
+            last_calls = state.setdefault("last_calls", {})
+            last_calls[str(index)] = time.time() + max(0.0, float(after_seconds))
+            _write_state(state_path, state)
+    except Exception:
+        pass
+
+
+def pace_call(state_path: Path, index: int, min_interval: float) -> None:
+    """Wait so the chosen key is not used more often than ``min_interval``."""
+    if min_interval <= 0:
+        return
+    try:
+        with FileLock(state_path.with_suffix(".lock")):
+            state = load_state_full(state_path)
+            last_calls = state.get("last_calls") or {}
+            last = float(last_calls.get(str(index), 0) or 0)
+        wait = last + min_interval - time.time()
+        if wait > 0:
+            time.sleep(wait)
     except Exception:
         pass
 
@@ -246,7 +347,11 @@ def cache_save(cache_root: Path, key: str, prompt: str, model: str, result: str)
         pass
 
 
-def _trim_cache(cache_root: Path, max_entries: int = CACHE_MAX_ENTRIES, trim_to: int = CACHE_TRIM_TO) -> None:
+def _trim_cache(
+    cache_root: Path,
+    max_entries: int = CACHE_MAX_ENTRIES,
+    trim_to: int = CACHE_TRIM_TO,
+) -> None:
     try:
         entries = [p for p in cache_root.glob("*.json") if p.is_file()]
         if len(entries) <= max_entries:
@@ -261,32 +366,69 @@ def _trim_cache(cache_root: Path, max_entries: int = CACHE_MAX_ENTRIES, trim_to:
         pass
 
 
-def build_request_body(config: dict, image_url: str, prompt: str, max_tokens: int) -> dict:
+def build_request_body(
+    config: dict,
+    image_urls: list[str],
+    prompt: str,
+    max_tokens: int,
+) -> dict:
+    content = [{"type": "image_url", "image_url": {"url": url}} for url in image_urls]
+    content.append({"type": "text", "text": prompt})
     return {
         "model": config["model"],
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image_url", "image_url": {"url": image_url}},
-                    {"type": "text", "text": prompt},
-                ],
-            }
-        ],
+        "messages": [{"role": "user", "content": content}],
         "max_tokens": max_tokens,
         "temperature": float(config.get("temperature", 0.2)),
     }
 
 
+class RateLimitedError(RuntimeError):
+    def __init__(self, wait_seconds: float, detail: str) -> None:
+        super().__init__(f"rate limited: {detail}")
+        self.wait_seconds = max(0.0, float(wait_seconds or 0))
+
+
+def _retry_seconds_from_headers(error: urllib.error.HTTPError) -> float:
+    try:
+        raw = error.headers.get("Retry-After")
+        if raw:
+            value = float(raw)
+            if value >= 0:
+                return value
+    except Exception:
+        pass
+    return 0.0
+
+
+def _retry_seconds_from_body(detail: str) -> float:
+    try:
+        payload = json.loads(detail)
+        err = payload.get("error") if isinstance(payload, dict) else None
+        if not isinstance(err, dict):
+            err = payload if isinstance(payload, dict) else {}
+        for key in ("retry_after_ms", "retry_after", "Retry-After"):
+            if key in err:
+                value = float(err[key])
+                if key == "retry_after_ms":
+                    value /= 1000.0
+                if value >= 0:
+                    return value
+    except Exception:
+        pass
+    return 0.0
+
+
 def call_api(
     config: dict,
-    image_url: str,
+    image_urls: list[str],
     prompt: str,
     api_key: str,
     timeout: int,
     max_tokens: int,
 ) -> str:
-    body = json.dumps(build_request_body(config, image_url, prompt, max_tokens)).encode("utf-8")
+    body = json.dumps(
+        build_request_body(config, image_urls, prompt, max_tokens)
+    ).encode("utf-8")
     request = urllib.request.Request(
         config["endpoint"],
         data=body,
@@ -301,6 +443,9 @@ def call_api(
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")[:500]
+        if error.code == 429:
+            wait = _retry_seconds_from_headers(error) or _retry_seconds_from_body(detail)
+            raise RateLimitedError(wait, f"HTTP 429: {detail}") from error
         raise RuntimeError(f"HTTP {error.code}: {detail}") from error
     except urllib.error.URLError as error:
         raise RuntimeError(f"network error: {error.reason}") from error
@@ -312,7 +457,18 @@ def call_api(
         raise RuntimeError(f"request failed: {error}") from error
 
     if "error" in payload:
-        raise RuntimeError(f"API error: {json.dumps(payload['error'], ensure_ascii=False)}")
+        err = payload["error"]
+        msg = json.dumps(err, ensure_ascii=False)
+        code = str(err.get("code", "")) if isinstance(err, dict) else ""
+        lowered = msg.lower()
+        if (
+            code in ("429", "rate_limit", "ratelimit", "ratelimiterror")
+            or "限流" in msg
+            or "rate limit" in lowered
+        ):
+            wait = _retry_seconds_from_body(json.dumps(payload, ensure_ascii=False)[:500])
+            raise RateLimitedError(wait, msg) from None
+        raise RuntimeError(f"API error: {msg}") from None
     try:
         content = payload["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError) as error:
@@ -337,10 +493,18 @@ def masked_key(api_key: str) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Describe an image with a Zhipu GLM vision model (API-key rotation)."
+        description="Describe images with a Zhipu GLM vision model (API-key rotation)."
     )
-    parser.add_argument("image", help="Local image path or http(s) URL")
+    parser.add_argument("image", nargs="?", default=None, help="Local image path or http(s) URL")
     parser.add_argument("prompt", nargs="?", default=None, help="Instruction for the model")
+    parser.add_argument(
+        "--image",
+        action="append",
+        dest="images",
+        default=None,
+        metavar="IMG",
+        help="Image to include; repeat --image for multiple images sent in one API request (avoids rate limits)",
+    )
     parser.add_argument(
         "--config",
         default=str(script_dir() / CONFIG_FILENAME),
@@ -373,6 +537,16 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Bypass the on-disk response cache",
     )
+    parser.add_argument(
+        "--no-wait",
+        action="store_true",
+        help="Disable cross-process pacing between API calls",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print pacing/retry diagnostics to stderr",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -381,28 +555,42 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {error}", file=sys.stderr)
         return 1
 
-    prompt = args.prompt.strip() if args.prompt and args.prompt.strip() else DEFAULT_PROMPT
+    images = list(args.images) if args.images else ([args.image] if args.image else [])
+    if not images:
+        print("error: provide <image> or --image <img> (repeatable)", file=sys.stderr)
+        return 1
+
+    prompt = args.prompt.strip() if args.prompt and args.prompt.strip() else None
+    if prompt is None:
+        prompt = DEFAULT_PROMPT_BATCH if len(images) > 1 else DEFAULT_PROMPT
     max_tokens = args.max_tokens or int(config.get("max_tokens", DEFAULT_MAX_TOKENS))
     max_image_size = args.max_image_size or int(config.get("max_image_size", DEFAULT_MAX_IMAGE_SIZE))
 
     try:
-        is_remote = is_remote_url(args.image)
-        if is_remote:
-            image_url = args.image
-            sent_bytes = args.image.encode("utf-8")
-        else:
-            image_url = image_to_data_url(Path(args.image), max_image_size)
-            sent_bytes = image_url.encode("ascii")
+        image_urls = []
+        sent_parts = []
+        for item in images:
+            if is_remote_url(item):
+                image_urls.append(item)
+                sent_parts.append(item.encode("utf-8"))
+            else:
+                url = image_to_data_url(Path(item), max_image_size)
+                image_urls.append(url)
+                sent_parts.append(url.encode("ascii"))
     except ValueError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
+    sent_bytes = b"\x1f".join(sent_parts)
+    any_remote = any(is_remote_url(item) for item in images)
 
     keys = config["api_keys"]
     timeout = int(config.get("timeout", 60))
     model = args.model or config["model"]
+    min_interval = 0.0 if args.no_wait else float(config.get("rate_limit_interval", DEFAULT_MIN_INTERVAL))
+    max_retries = int(config.get("rate_limit_retries", DEFAULT_RATE_LIMIT_RETRIES))
 
     cache_root = cache_dir(config)
-    use_cache = not args.no_cache and not is_remote
+    use_cache = not args.no_cache and not any_remote
     if use_cache:
         cached = cache_lookup(cache_root, cache_key(sent_bytes, prompt, model), prompt, model)
         if cached is not None:
@@ -416,16 +604,43 @@ def main(argv: list[str] | None = None) -> int:
     for offset in range(len(keys)):
         index = (start + offset) % len(keys)
         api_key = keys[index]
-        try:
-            result = call_api(config, image_url, prompt, api_key, timeout, max_tokens)
-        except RuntimeError as error:
-            failures.append(f"key[{index}] ({masked_key(api_key)}): {error}")
-            continue
-        save_state(Path(args.state), index)
-        if use_cache:
-            cache_save(cache_root, cache_key(sent_bytes, prompt, model), prompt, model, result)
-        print(result)
-        return 0
+        attempts = 0
+        while True:
+            attempts += 1
+            pace_call(Path(args.state), index, min_interval)
+            try:
+                result = call_api(config, image_urls, prompt, api_key, timeout, max_tokens)
+            except RateLimitedError as error:
+                wait = error.wait_seconds or RATE_LIMIT_DEFAULT_WAIT
+                wait = min(wait, MAX_RETRY_WAIT)
+                record_call(Path(args.state), index, wait)
+                if attempts <= max_retries:
+                    if args.verbose:
+                        print(
+                            f"[glm-vision] key[{index}] rate limited; "
+                            f"retrying in {wait:.0f}s (attempt {attempts}/{max_retries})",
+                            file=sys.stderr,
+                        )
+                    time.sleep(wait)
+                    continue
+                failures.append(f"key[{index}] ({masked_key(api_key)}): {error}")
+                break
+            except RuntimeError as error:
+                record_call(Path(args.state), index)
+                failures.append(f"key[{index}] ({masked_key(api_key)}): {error}")
+                break
+            record_call(Path(args.state), index)
+            save_state(Path(args.state), index)
+            if use_cache:
+                cache_save(
+                    cache_root,
+                    cache_key(sent_bytes, prompt, model),
+                    prompt,
+                    model,
+                    result,
+                )
+            print(result)
+            return 0
 
     print("all API keys failed:", file=sys.stderr)
     for failure in failures:

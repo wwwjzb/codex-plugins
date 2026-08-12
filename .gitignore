@@ -1,5 +1,19 @@
-# 真实 API Key 配置不入库（仅保留本机使用）
+# 真实 API Key 配置严禁提交
 glm-vision/scripts/config.json
 
-# 图片请求缓存
+# 运行时状态与缓存
+glm-vision/scripts/state.json
+glm-vision/scripts/state.lock
 glm-vision/scripts/cache/
+__pycache__/
+*.pyc
+
+# 会话工作区 / 交付物目录
+work/
+outputs/
+
+# 编辑器 / 系统文件
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
