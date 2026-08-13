@@ -1,0 +1,32 @@
+{
+  "name": "miao-song-planner",
+  "version": "0.1.0",
+  "description": "面向妙响（汽水音乐旗下 AI 音乐创作平台，Sway5.5 模型）的歌曲创作向导：以 12 轮固定顺序问卷逐项确定主题、曲风、情绪、歌词风格、人声、编配、律动、质感、歌曲结构、BPM、效果器与段落发展，最终输出可直接粘贴到妙响使用的完整创作方案。",
+  "author": {
+    "name": "Codex User"
+  },
+  "license": "MIT",
+  "keywords": [
+    "music",
+    "song",
+    "miao-xiang",
+    "sway5.5",
+    "planner",
+    "questionnaire"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "妙响歌曲创作向导",
+    "shortDescription": "12 轮问卷为妙响 Sway5.5 策划完整歌曲创作方案",
+    "longDescription": "在妙响（Sway5.5）创作歌曲时，用 12 轮固定顺序问卷逐项确定主题、曲风、情绪、歌词风格、人声、编配、律动、质感、歌曲结构、BPM、效果器与段落发展，最终输出歌名、歌词框、风格描述框、参数建议和创作蓝图，可直接粘贴到妙响使用。",
+    "developerName": "Codex User",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "brandColor": "#4F46E5",
+    "defaultPrompt": [
+      "帮我策划一首新歌"
+    ]
+  }
+}

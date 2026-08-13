@@ -1,0 +1,4 @@
+interface:
+  display_name: "妙响歌曲创作向导"
+  short_description: "妙响自适应问卷式歌曲策划向导，12轮选择生成完整方案"
+  default_prompt: "用 $miao-song-planner 帮我策划一首新歌，主题是深夜都市。"
