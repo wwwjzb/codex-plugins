@@ -156,7 +156,7 @@ def main():
     ap.add_argument("--instrumental", action="store_true", help="纯音乐（无歌词）")
     ap.add_argument("--out", default=".", help="输出目录")
     ap.add_argument("--tag", default="preview", help="文件名前缀")
-    ap.add_argument("--seconds", type=int, default=DEFAULT_SECONDS, help="裁剪时长（默认 30 秒）")
+    ap.add_argument("--seconds", type=int, default=DEFAULT_SECONDS, help="裁剪时长（默认 30 秒；填 0 保留完整时长）")
     args = ap.parse_args()
 
     out_dir = Path(args.out)
@@ -164,7 +164,8 @@ def main():
 
     audio = call_music(args.prompt.strip(), args.lyrics.strip(), args.instrumental)
     raw = fetch_audio(audio)
-    params, frames, duration = load_and_trim(raw, args.seconds)
+    max_seconds = args.seconds if args.seconds > 0 else 10**9
+    params, frames, duration = load_and_trim(raw, max_seconds)
 
     ts = time.strftime("%Y%m%d_%H%M%S")
     dest = out_dir / f"{args.tag}_{ts}.wav"
