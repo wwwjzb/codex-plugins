@@ -1,6 +1,6 @@
 # GLM Vision 插件
 
-为 Codex 增加图片理解能力：通过智谱 GLM 多模态模型（默认 `glm-5v-turbo`）描述图片、截图、UI 设计稿、图表和文档版面。
+为 Codex 增加图片理解能力：通过智谱 GLM 多模态模型（默认 `glm-4.6v`）描述图片、截图、UI 设计稿、图表和文档版面。
 
 ## 特性
 
@@ -28,7 +28,7 @@ skills/glm-vision/SKILL.md  技能说明
 ```json
 {
   "endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-  "model": "glm-5v-turbo",
+  "model": "glm-4.6v",
   "api_keys": ["KEY_1", "KEY_2", "KEY_3"],
   "timeout": 60,
   "max_tokens": 2048,

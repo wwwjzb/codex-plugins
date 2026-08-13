@@ -1,11 +1,11 @@
 ---
 name: glm-vision
-description: 为 Codex 增加视觉能力。当任务需要查看或分析图片（本地图片、截图、UI 设计稿、图表、文档版面等）时，用智谱 GLM-5V-Turbo 描述图片内容。Use when a task requires understanding image content, screenshots, UI mockups, charts, or document layouts.
+description: 为 Codex 增加视觉能力。当任务需要查看或分析图片（本地图片、截图、UI 设计稿、图表、文档版面等）时，用智谱 GLM-4.6V 描述图片内容。Use when a task requires understanding image content, screenshots, UI mockups, charts, or document layouts.
 ---
 
 # GLM Vision
 
-通过智谱 GLM-5V-Turbo 多模态 API 为 Codex 提供图片理解能力。本技能在需要「看」图片时，调用本地脚本把图片发送给 GLM，并取回文字描述。
+通过智谱 GLM-4.6V 多模态 API 为 Codex 提供图片理解能力。本技能在需要「看」图片时，调用本地脚本把图片发送给 GLM，并取回文字描述。
 
 ## 何时使用
 

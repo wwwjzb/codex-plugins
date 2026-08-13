@@ -1,6 +1,6 @@
 {
   "endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-  "model": "glm-5v-turbo",
+  "model": "glm-4.6v",
   "api_keys": [
     "PASTE_YOUR_API_KEY_1",
     "PASTE_YOUR_API_KEY_2",
