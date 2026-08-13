@@ -132,7 +132,7 @@ def fetch_audio(audio):
         sys.exit(5)
 
 
-def load_and_trim(raw, max_seconds):
+def load_and_trim(raw, max_seconds, offset_seconds=0.0):
     tmp = Path(os.environ.get("TEMP", ".")) / f"minimax_tmp_{int(time.time() * 1000)}.wav"
     tmp.write_bytes(raw)
     try:
@@ -140,11 +140,18 @@ def load_and_trim(raw, max_seconds):
             params = w.getparams()
             nframes = w.getnframes()
             rate = w.getframerate() or 44100
-            cut = min(nframes, int(max_seconds * rate))
-            frames = w.readframes(cut)
+            window = int(max_seconds * rate)
+            start = int(offset_seconds * rate)
+            if start + window > nframes:
+                start = max(0, nframes - window)
+            w.setpos(start)
+            frames = w.readframes(window)
+        nch = params[0]
+        sw = params[1]
+        frames_read = len(frames) // (nch * sw) if nch else 0
         params = list(params)
-        params[3] = len(frames) // (params[0] * params[1]) if params[0] else 0
-        return tuple(params), frames, cut / rate
+        params[3] = frames_read
+        return tuple(params), frames, frames_read / rate
     finally:
         tmp.unlink(missing_ok=True)
 
@@ -157,6 +164,7 @@ def main():
     ap.add_argument("--out", default=".", help="输出目录")
     ap.add_argument("--tag", default="preview", help="文件名前缀")
     ap.add_argument("--seconds", type=int, default=DEFAULT_SECONDS, help="裁剪时长（默认 30 秒；填 0 保留完整时长）")
+    ap.add_argument("--offset", type=float, default=0.0, help="截取起始点（秒，默认 0；超出曲尾自动收回）")
     args = ap.parse_args()
 
     out_dir = Path(args.out)
@@ -165,7 +173,7 @@ def main():
     audio = call_music(args.prompt.strip(), args.lyrics.strip(), args.instrumental)
     raw = fetch_audio(audio)
     max_seconds = args.seconds if args.seconds > 0 else 10**9
-    params, frames, duration = load_and_trim(raw, max_seconds)
+    params, frames, duration = load_and_trim(raw, max_seconds, args.offset)
 
     ts = time.strftime("%Y%m%d_%H%M%S")
     dest = out_dir / f"{args.tag}_{ts}.wav"
