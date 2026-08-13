@@ -19,6 +19,7 @@
 """
 
 import argparse
+import base64
 import json
 import os
 import sys
@@ -29,6 +30,7 @@ import wave
 from pathlib import Path
 
 API_URL = "https://api.minimaxi.com/v1/music_generation"
+PREPROCESS_URL = "https://api.minimaxi.com/v1/music_cover_preprocess"
 MODEL = "music-3.0-free"
 DEFAULT_SECONDS = 30
 
@@ -132,6 +134,86 @@ def fetch_audio(audio):
         sys.exit(5)
 
 
+def _post_json(url, payload, key):
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={
+            "Authorization": "Bearer " + key,
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=240) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        sys.stderr.write(f"接口 HTTP {e.code}: {body}\n")
+        sys.exit(3)
+    except Exception as e:
+        sys.stderr.write(f"网络请求失败: {e}\n")
+        sys.exit(3)
+
+
+def _check_business(result, context):
+    base = result.get("base_resp", {})
+    code = base.get("status_code", -1)
+    if code != 0:
+        msg = base.get("status_msg", "未知错误")
+        hint = {
+            1002: "触发限流（每分钟最多 3 次），请稍候再试。",
+            1004: "API Key 鉴权失败，请检查密钥。",
+            1008: "账户余额不足：请到 platform.minimaxi.com 充值后重试（免费档同样需要账户有余额）。",
+            2013: "请求参数异常，请检查 prompt/歌词格式。",
+            2049: "API Key 无效，请检查密钥。",
+        }.get(code, "")
+        sys.stderr.write(f"{context} 返回错误 {code}: {msg}。{hint}\n")
+        sys.exit(4)
+
+
+def call_cover(prompt, lyrics, cover_base):
+    """两步翻唱：参考音频预处理 -> 用最终歌词和风格生成翻唱版。"""
+    key = get_api_key()
+    raw = Path(cover_base).read_bytes()
+    if len(raw) > 50 * 1024 * 1024:
+        sys.stderr.write("参考音频超过 50MB。\n")
+        sys.exit(5)
+    b64 = base64.b64encode(raw).decode("ascii")
+
+    prep = _post_json(
+        PREPROCESS_URL,
+        {"model": "music-cover", "audio_base64": b64},
+        key,
+    )
+    _check_business(prep, "翻唱前处理")
+    feature_id = prep.get("cover_feature_id")
+    if not feature_id:
+        sys.stderr.write("翻唱前处理未返回 cover_feature_id。\n")
+        sys.exit(5)
+
+    payload = {
+        "model": "music-cover-free",
+        "prompt": prompt,
+        "lyrics": lyrics,
+        "cover_feature_id": feature_id,
+        "audio_setting": {"format": "mp3", "sample_rate": 44100, "bitrate": 256000},
+        "output_format": "url",
+    }
+    result = _post_json(API_URL, payload, key)
+    _check_business(result, "翻唱生成")
+    data = result.get("data") or {}
+    if data.get("status") == 1:
+        sys.stderr.write("音乐仍在合成中，请稍后重试本次调用。\n")
+        sys.exit(5)
+    audio = data.get("audio") or data.get("audio_url") or ""
+    if not audio:
+        sys.stderr.write("返回数据中没有音频。\n")
+        sys.exit(5)
+    dur_ms = (result.get("extra_info") or {}).get("music_duration")
+    return audio, dur_ms
+
+
 def load_and_trim(raw, max_seconds, offset_seconds=0.0):
     tmp = Path(os.environ.get("TEMP", ".")) / f"minimax_tmp_{int(time.time() * 1000)}.wav"
     tmp.write_bytes(raw)
@@ -165,21 +247,35 @@ def main():
     ap.add_argument("--tag", default="preview", help="文件名前缀")
     ap.add_argument("--seconds", type=int, default=DEFAULT_SECONDS, help="裁剪时长（默认 30 秒；填 0 保留完整时长）")
     ap.add_argument("--offset", type=float, default=0.0, help="截取起始点（秒，默认 0；超出曲尾自动收回）")
+    ap.add_argument("--cover-base", default="", help="参考音频路径：启用 music-cover 两步翻唱流程（需同时提供 --lyrics）")
     args = ap.parse_args()
 
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    audio = call_music(args.prompt.strip(), args.lyrics.strip(), args.instrumental)
-    raw = fetch_audio(audio)
-    max_seconds = args.seconds if args.seconds > 0 else 10**9
-    params, frames, duration = load_and_trim(raw, max_seconds, args.offset)
-
     ts = time.strftime("%Y%m%d_%H%M%S")
-    dest = out_dir / f"{args.tag}_{ts}.wav"
-    with wave.open(str(dest), "wb") as w:
-        w.setparams(params)
-        w.writeframes(frames)
+
+    lyrics = args.lyrics.strip()
+    if args.cover_base:
+        if not lyrics:
+            sys.stderr.write("翻唱模式必须提供 --lyrics。\n")
+            sys.exit(2)
+        if not (10 <= len(lyrics) <= 1000):
+            sys.stderr.write(f"翻唱歌词长度需在 10-1000 字符（当前 {len(lyrics)}）。\n")
+            sys.exit(2)
+        audio, dur_ms = call_cover(args.prompt.strip(), lyrics, args.cover_base)
+        raw = fetch_audio(audio)
+        dest = out_dir / f"{args.tag}_{ts}.mp3"
+        dest.write_bytes(raw)
+        duration = (dur_ms or 0) / 1000.0
+    else:
+        audio = call_music(args.prompt.strip(), lyrics, args.instrumental)
+        raw = fetch_audio(audio)
+        max_seconds = args.seconds if args.seconds > 0 else 10**9
+        params, frames, duration = load_and_trim(raw, max_seconds, args.offset)
+        dest = out_dir / f"{args.tag}_{ts}.wav"
+        with wave.open(str(dest), "wb") as w:
+            w.setparams(params)
+            w.writeframes(frames)
 
     print(f"SAVED:{dest}")
     print(f"DURATION:{duration:.1f}")
