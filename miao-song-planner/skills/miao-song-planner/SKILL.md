@@ -56,6 +56,7 @@ description: Use when 用户想为妙响（汽水音乐旗下 AI 音乐创作平
   3. Arrangement：主/次乐器 + 段落级乐器演变 + 律动/贝斯/打击 + 织体与空间效果
 - DNA 锚定信息固定不变，放进 Global Metadata（如「English broken-love song, contemporary R&B, late-night bedroom, warm and loose」），保持试听同源感。
 - 已积累参数按 主题 → 曲风 → 情绪 → 人声 → 编配 → 律动/速度 顺序逐轮映射到对应小节；每轮只追加新选择，保留之前全部，总长 ≤2000 字符。
+- 组装时优先参考 `references/minimax-official/` 内置官方词库：渐进读取 genre-router → 1–2 个家族索引 → ≤3 个模板；**模板句子不可照抄**，须围绕已确认参数综合改写，问卷选择为硬约束。
 - 歌词永远不写进 prompt：通过 `--lyrics` 单独传入；结构标签只用官方 14 个（`[Intro] [Verse] [Pre Chorus] [Chorus] [Interlude] [Bridge] [Outro] [Post Chorus] [Transition] [Break] [Hook] [Build Up] [Inst] [Solo]`），**不用 [Final Chorus] 或带连字符的 [Pre-Chorus]/[Post-Chorus]**；末段副歌用 [Chorus] + 括号指令/Ad-lib 表达升级。
 - 乐器词库只用 MiniMax 官方可识别写法（808 sub-bass、rolling triplet hi-hats、trap percussion、Rhodes piano、electric piano (Rhodes-style)、plucked synth、synth pad 等）；**禁止把妙响式安全替代词（闷 Snare、闷 Rim、木质 Tick、短 Stab 替代 Hat）写进 MiniMax prompt**。
 - 官方限制（MiniMax Music 3 文档）：这些控制是**生成式引导而非严格保证**，tempo/key/乐器/结构可能不完全匹配；三段式只能提高命中率。
@@ -126,6 +127,7 @@ description: Use when 用户想为妙响（汽水音乐旗下 AI 音乐创作平
 - `references/lyric-guide.md`：第 8 轮、歌词撰写与多音字检查。
 - `references/sound-guide.md`：第 6/7 轮、风格描述撰写、高频噪声与明亮度规则。
 - `references/minimax-caption.md`：MiniMax Music 3 官方三段式提示词模板（Global Metadata / Vocal Details / Arrangement）与问卷参数映射规则。
+- `references/minimax-official/`：MiniMax 官方 music-caption-rewriter 词库内置副本（曲风路由 + 9 家族索引 + 14 模板），组装 MiniMax prompt 时按需渐进读取。
 - `references/output-template.md`：最终方案组装模板。
 
 ## 交付前检查清单
