@@ -90,7 +90,7 @@ Embellishments, Textures & Spatial FX: rain ambience in the intro and outro, rev
 
 - 段落标签与音乐描述提供的是**生成式引导（generative control），不是严格符号保证**：tempo、key、乐器、歌词与结构可能不完全匹配。
 - 三段式描述只能提高命中率；鼓组/乐器跑偏属已知模型特性。
-- prompt 文本 token 上限约 5000 tokens；本 skill 规定组装后 ≤2000 字符，留足余量。
+- prompt 文本长度硬上限 2000 字符（超出报 2013）；本 skill 规定组装后 **≤1900 字符留余量**（2026-08-14 实测 1882 通过）。歌词上限 3500 字符。
 
 ## 七、官方模板库（已内置）
 
