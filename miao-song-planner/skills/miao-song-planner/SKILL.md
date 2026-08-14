@@ -47,11 +47,16 @@ description: Use when 用户想为妙响（汽水音乐旗下 AI 音乐创作平
 - 若用户已声明「纯音乐」，第 4 轮（人声）不适用，跳过该轮预览；第 5 轮（编配）仍生成。
 - 用户自定义答案时同样生成预览（用映射后的分支配置组装 prompt）。
 
-### 歌曲 DNA 前缀（保持试听同源感）
+### 三段式提示词（Structured Caption，MiniMax 官方推荐）
 
-- 每轮预览 prompt = 「DNA 前缀 + 已积累参数」。
-- DNA 前缀固定不变：`歌曲语言 + 主题一句话 + 基础曲风家族 + 固定场景意象`（如「英文夏日恋曲，当代 R&B，海边晚风，温暖松弛」）。
-- 已积累参数按 主题 → 曲风 → 情绪 → 人声 → 编配 → 律动/速度 顺序逐轮追加；每轮只追加新选择，保留之前全部，长度 ≤2000 字符。
+- 每轮预览 prompt = 「三段式结构化描述」，按 `references/minimax-caption.md` 模板组装：
+  1. Global Metadata：歌曲语言 + 主题一句话 + 曲风家族/子类 + BPM/拍号/调性 + 情绪推进 + 聆听场景 + 制作质感
+  2. Vocal Details：人声性别/音色/唱法 + 和声/伴唱/人声效果
+  3. Arrangement：主/次乐器 + 段落级乐器演变 + 律动/贝斯/打击 + 织体与空间效果
+- DNA 锚定信息固定不变，放进 Global Metadata（如「English broken-love song, contemporary R&B, late-night bedroom, warm and loose」），保持试听同源感。
+- 已积累参数按 主题 → 曲风 → 情绪 → 人声 → 编配 → 律动/速度 顺序逐轮映射到对应小节；每轮只追加新选择，保留之前全部，总长 ≤2000 字符。
+- 歌词永远不写进 prompt：通过 `--lyrics` 单独传入，并保留 `[Intro] / [Verse] / [Chorus]` 等段落标签（官方推荐做法）。
+- 官方限制（MiniMax Music 3 文档）：这些控制是**生成式引导而非严格保证**，tempo/key/乐器/结构可能不完全匹配；三段式只能提高命中率。
 
 ### 生成流程
 
@@ -59,7 +64,7 @@ description: Use when 用户想为妙响（汽水音乐旗下 AI 音乐创作平
 2. 关键轮次试听（从零生成，wav，30 秒，错开截取）：
 
    ```
-   <python> <skill目录>/scripts/preview.py --prompt "DNA前缀 + 已积累参数" --offset <错开秒数> --tag r<N> --out "D:\AI MUSIC\previews"
+   <python> <skill目录>/scripts/preview.py --prompt "三段式结构化描述" --offset <错开秒数> --tag r<N> --out "D:\AI MUSIC\previews"
    ```
 
    - 错开起始点：r1=0s、r2=15s、r3=30s、r4=45s、r5=60s、r6=75s（时长不足时脚本自动收回）。
@@ -118,6 +123,7 @@ description: Use when 用户想为妙响（汽水音乐旗下 AI 音乐创作平
 - `references/style-bank.md`：第 2/3/4/5/6/8 轮。15 类 R&B 风格库与跨轮分支映射；用户选定曲风后只读取该风格的分节。
 - `references/lyric-guide.md`：第 8 轮、歌词撰写与多音字检查。
 - `references/sound-guide.md`：第 6/7 轮、风格描述撰写、高频噪声与明亮度规则。
+- `references/minimax-caption.md`：MiniMax Music 3 官方三段式提示词模板（Global Metadata / Vocal Details / Arrangement）与问卷参数映射规则。
 - `references/output-template.md`：最终方案组装模板。
 
 ## 交付前检查清单
@@ -127,7 +133,7 @@ description: Use when 用户想为妙响（汽水音乐旗下 AI 音乐创作平
 - [ ] 歌词完成多音字逐行检查，优先改写而非同音字
 - [ ] 主题锚定后已生成歌词草稿并获用户确认；关键轮次试听与成品均使用当前歌词
 - [ ] 风格描述不含高频噪声禁用词、无艺人姓名、无主观空话
-- [ ] 关键轮次（r1/r2/r3/r4/r5/r6）试听均用从零生成，prompt = DNA 前缀 + 已积累参数
+- [ ] 关键轮次（r1/r2/r3/r4/r5/r6）试听均用从零生成，prompt = 三段式结构化描述（Global Metadata / Vocal Details / Arrangement）
 - [ ] 试听起始点已按 r1=0s / r2=15s / r3=30s / r4=45s / r5=60s / r6=75s 错开（时长不足自动收回）
 - [ ] 成品用完整结构化歌词从零生成（偏短时已重试取最长），并已按需择优
 - [ ] 翻唱仅用于成品风格变体（不用于参数试听；交付时已说明翻唱不改编曲）
