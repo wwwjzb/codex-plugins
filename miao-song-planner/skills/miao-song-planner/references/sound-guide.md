@@ -45,9 +45,9 @@ Hi-Hat、Crash、Ride、Shaker、Tambourine、Open Hat、现场鼓组、失真�
 | 密集 Hat | 木质 Tick、闷 Rim、短和弦 Stab | UK R&B、Garage |
 | Shaker/高频打击 | 软木 Block、低音 Conga、闷 Rim、短吉他拨弦、人声辅音 | Afro-R&B |
 | 开放镲/Crash | 不替代，直接去掉；用低音 Tom 过门做段落信号 | 全部 |
-| Clap | 短人声辅音、闷 Rim | Trap-Soul |
+| Clap | 短人声辅音、闷 Rim；Trap-Soul 例外：允许受控 Clap（非刺耳、音量压低） | Trap-Soul |
 
-规则：Funk、Garage、Afro 等风格不能把细分节奏全部删除，否则风格退化；用上述替代保住律动。
+规则：Funk、Garage、Afro 等风格不能把细分节奏全部删除，否则风格退化；用上述替代保住律动。**Trap-Soul 例外**：闭镲 16 分连击与 Clap 是风格身份必需，允许使用但必须受控（音量压低、不刺耳），不可替换成闷 Rim 后丢失 trap 特征；Kick 落 1 拍、Snare/Clap 落 3 拍，禁止 2/4 拍反拍（非 Boom Bap）。
 
 ## 三、明亮度要求（「明亮」= 音色与混音清晰度）
 
