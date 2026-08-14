@@ -31,6 +31,7 @@
 
 ## 二、通用规则（所有风格适用）
 
+- 本库的通用规则与各风格数据面向**妙响（Sway5.5）最终风格框**；生成 **MiniMax 试听/成品 prompt** 时，按 `references/minimax-caption.md` 的官方词库与三段式写法组装（允许 808 sub-bass、rolling triplet hi-hats、Clap 等），不受本库高频禁用表限制。
 - 高频安全替代：细分节奏由闷音吉他十六分、短 Rhodes Stab、木质 Rim、低 Tom、低 Conga、短人声辅音承担。
 - 通用禁用：开镲（Open Hat）、吊镲（Crash/Ride/Cymbal）、Shaker、Tambourine、白噪声、嘶声、静电、失真铺底、黑胶/磁带/Lo-fi 纹理词；细分节奏默认用安全替代。
 - 风格例外（唯一）：**Trap-Soul 允许受控闭镲 16 分连击与 Clap**——这是 trap 身份必需，但 prompt 必须写「受控、不刺耳、音量压低」；其余 14 个风格一律不用镲片与 Clap。
@@ -188,13 +189,13 @@
   3. 暗 Pad + 808 + 短 Pluck
   4. 钢琴 + 808 + 人声和声层
   5. 合成贝斯 + 冷色纹理 + 负空间
-- **律动方案**：
-  1. 半拍闷 Snare + 808 长音
-  2. 4/4 半速听感，Kick 落 1 拍、Clap 落 3 拍，闭镲稀疏
-  3. 808 滑音：Kick 1 拍 + 808 滑音 + Clap 3 拍 + 闭镲 16 分
-  4. 留白 trap：只留 Kick 1 拍 + 轻 Clap 3 拍，无连续镲
-  5. 慢速 trap：65–72 BPM，Kick 1 拍 + 闷 Snare 3 拍 + 极简闭镲
-- **Trap 鼓组显式写法（必须逐拍写进 prompt，否则模型常生成成 Boom Bap）**：808 Kick 落第 1 拍（可加软滑音），Snare/Clap 只在第 3 拍，闭镲 16 分连击 + 32 分滚奏填空；并明确写「no backbeat snare on beats 2 or 4; not boom-bap; not straight kick on 1 and 3」。
+- **律动方案（全部保持 trap 身份：808 sub-bass + rolling hi-hats + snare/clap，非采样 Boom Bap 循环）**：
+  1. 经典 trap：punchy 808 kick + crisp snapping snare/clap + rapid rolling triplet hi-hats（140–150 BPM 半速听感）
+  2. 标准 140：kick + snare/clap + 16 分闭镲连击（全速 140，半速听感 70）
+  3. 808 滑音 trap：sliding 808 sub-bass + snare/clap + 复杂切分 hi-hat
+  4. 留白 trap：只留 kick + snare/clap，镲只在句尾滚奏
+  5. 慢速 trap：65–72 BPM，kick + 轻 snare/clap + 极简 hat
+- **Trap 鼓组显式写法（2026-08-14 官方核对，写进 prompt）**：官方模板原文是 "classic trap foundation featuring a punchy kick drum and a crisp, snapping snare/clap on beats 2 and 4. Rapid, rolling hi-hat patterns with frequent triplet subdivisions and pitch variations"；与 Boom Bap 的区分靠「rolling triplet hi-hats + 808 sub-bass 保持突出」而不是军鼓位置，并补一句 "keep the rolling hi-hats and 808 sub-bass prominent; not a sampled boom-bap loop"。不要用「闷 Snare、闷 Rim」等妙响式替代词写 MiniMax prompt。
 - **BPM/拍号**：
   1. 140 BPM 4/4（半速听感 70）
   2. 150 BPM 4/4（半速听感 75）

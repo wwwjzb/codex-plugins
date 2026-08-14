@@ -50,13 +50,14 @@ description: Use when 用户想为妙响（汽水音乐旗下 AI 音乐创作平
 
 ### 三段式提示词（Structured Caption，MiniMax 官方推荐）
 
-- 每轮预览 prompt = 「三段式结构化描述」，按 `references/minimax-caption.md` 模板组装：
+- 每轮预览 prompt = 「三段式结构化描述」，按 `references/minimax-caption.md` 模板组装；**写完整英文句子（约 250–450 词），不用逗号标签堆砌**：
   1. Global Metadata：歌曲语言 + 主题一句话 + 曲风家族/子类 + BPM/拍号/调性 + 情绪推进 + 聆听场景 + 制作质感
   2. Vocal Details：人声性别/音色/唱法 + 和声/伴唱/人声效果
   3. Arrangement：主/次乐器 + 段落级乐器演变 + 律动/贝斯/打击 + 织体与空间效果
 - DNA 锚定信息固定不变，放进 Global Metadata（如「English broken-love song, contemporary R&B, late-night bedroom, warm and loose」），保持试听同源感。
 - 已积累参数按 主题 → 曲风 → 情绪 → 人声 → 编配 → 律动/速度 顺序逐轮映射到对应小节；每轮只追加新选择，保留之前全部，总长 ≤2000 字符。
-- 歌词永远不写进 prompt：通过 `--lyrics` 单独传入，并保留 `[Intro] / [Verse] / [Chorus]` 等段落标签（官方推荐做法）。
+- 歌词永远不写进 prompt：通过 `--lyrics` 单独传入；结构标签只用官方 14 个（`[Intro] [Verse] [Pre Chorus] [Chorus] [Interlude] [Bridge] [Outro] [Post Chorus] [Transition] [Break] [Hook] [Build Up] [Inst] [Solo]`），**不用 [Final Chorus] 或带连字符的 [Pre-Chorus]/[Post-Chorus]**；末段副歌用 [Chorus] + 括号指令/Ad-lib 表达升级。
+- 乐器词库只用 MiniMax 官方可识别写法（808 sub-bass、rolling triplet hi-hats、trap percussion、Rhodes piano、electric piano (Rhodes-style)、plucked synth、synth pad 等）；**禁止把妙响式安全替代词（闷 Snare、闷 Rim、木质 Tick、短 Stab 替代 Hat）写进 MiniMax prompt**。
 - 官方限制（MiniMax Music 3 文档）：这些控制是**生成式引导而非严格保证**，tempo/key/乐器/结构可能不完全匹配；三段式只能提高命中率。
 
 ### 生成流程
@@ -136,7 +137,7 @@ description: Use when 用户想为妙响（汽水音乐旗下 AI 音乐创作平
 - [ ] 风格描述不含高频噪声禁用词、无艺人姓名、无主观空话
 - [ ] 关键轮次（r1/r2/r3/r4/r5/r6）试听均用从零生成，prompt = 三段式结构化描述（Global Metadata / Vocal Details / Arrangement）
 - [ ] 试听起始点已按 r1=0s / r2=15s / r3=30s / r4=45s / r5=60s / r6=75s 错开（时长不足自动收回）
-- [ ] Trap-Soul 试听/成品 prompt 已显式写鼓组（Kick 落 1 拍 / Snare 落 3 拍 / 16 分 Hi-Hat 连击），并写明「非 Boom Bap、无 2/4 拍反拍军鼓」
+- [ ] Trap-Soul 试听/成品 prompt 已用官方 trap 写法：punchy 808 kick + crisp snapping snare/clap + rapid rolling triplet hi-hats + 808 sub-bass，并写明「not a sampled boom-bap loop」
 - [ ] 成品用完整结构化歌词从零生成（偏短时已重试取最长），并已按需择优
 - [ ] 翻唱仅用于成品风格变体（不用于参数试听；交付时已说明翻唱不改编曲）
 - [ ] 完整曲目生成后已询问试听文件保留/删除，并按用户选择处理

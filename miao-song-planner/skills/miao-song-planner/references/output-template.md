@@ -1,6 +1,8 @@
 # 最终方案组装模板
 
-问卷 12 轮结束后，按下面 6 个部分一次性输出。以下为结构与填写规范，不是填空模板——内容必须来自问卷答案并整合参考库。
+问卷 8 轮结束后，按下面 6 个部分一次性输出。以下为结构与填写规范，不是填空模板——内容必须来自问卷答案并整合参考库。
+
+> 标签注意：歌词框中的 [Final Chorus] / [Pre-Chorus] / [Post-Chorus] 是妙响/方案展示写法；**提交给 MiniMax 生成时**，末段副歌一律改用 [Chorus]，并用 `[Chorus][full arrangement, layered vocals, ad-libs, emotional peak]` 表达升级（官方 14 个标签无 [Final Chorus]）。
 
 ## 1. 歌名
 
