@@ -1,6 +1,6 @@
 {
   "name": "miao-song-planner",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "面向妙响（汽水音乐旗下 AI 音乐创作平台，Sway5.5 模型）的歌曲创作向导：以 8 轮固定顺序问卷逐项确定主题、曲风、情绪、人声、编配、律动与速度、质感与效果器、歌词与结构，最终输出可直接粘贴到妙响使用的完整创作方案；关键轮次可调用 MiniMax music-3.0-free 生成试听预览。",
   "author": {
     "name": "Codex User"
