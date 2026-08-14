@@ -40,6 +40,15 @@ Vocal Details: female lead, husky warm timbre, breathy intimate delivery in vers
 Arrangement: verse = Rhodes piano + soft 808 pulse; pre-chorus = filtered drums building tension; chorus = full trap drum kit with hi-hat rolls, deep 808 bass, staccato synth stabs, ambient pad textures; bridge = stripped to keys with reverb swell; wide delays on vocals, deep reverb on snare.
 ```
 
+## 律动显式写法（Trap-Soul 实测要点，2026-08-14）
+
+- 只写「trap 鼓组 / hi-hat rolls」容易被模型生成成 **Boom Bap**（军鼓落 2、4 拍、Kick 落 1、3 拍），听感变成「动次打次」。
+- Trap 标准律动必须逐拍写清，并加否定句防跑偏：
+  - 808 Kick：落第 1 拍，可加软滑音；
+  - Snare / Clap：**只在第 3 拍**；
+  - 闭镲：16 分连击 + 32 分滚奏填空，轻重变化制造弹性；
+  - 明确写：`no backbeat snare on beats 2 or 4; not boom-bap; not straight kick on 1 and 3`。
+
 ## 官方已知限制
 
 - 段落标签与音乐描述提供的是**生成式引导（generative control），不是严格符号保证**：生成的 tempo、key、乐器、歌词与结构可能不完全匹配每一项要求。

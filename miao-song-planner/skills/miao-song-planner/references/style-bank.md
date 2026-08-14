@@ -192,6 +192,7 @@
   3. 2-step 跳拍 + 808
   4. 摇摆重音跨拍 + 闷 Rim
   5. 留白为主的稀疏鼓 + 心跳 Kick
+- **Trap 鼓组显式写法（必须逐拍写进 prompt，否则模型常生成成 Boom Bap）**：808 Kick 落第 1 拍（可加软滑音），Snare/Clap 只在第 3 拍，闭镲 16 分连击 + 32 分滚奏填空；并明确写「no backbeat snare on beats 2 or 4; not boom-bap; not straight kick on 1 and 3」。
 - **BPM/拍号**：
   1. 140 BPM 4/4（半速听感 70）
   2. 150 BPM 4/4（半速听感 75）
